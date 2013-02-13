@@ -18,12 +18,12 @@
  */
 package org.apache.shindig.gadgets.render;
 
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 
 import com.google.common.base.Preconditions;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableMultimap;
-import com.google.common.collect.MapMaker;
 import com.google.common.collect.Multimap;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
@@ -44,7 +44,7 @@ import com.google.inject.name.Named;
 @Singleton
 public class DefaultRpcServiceLookup implements RpcServiceLookup {
 
-  private final ConcurrentMap<String, Multimap<String, String>> containerServices;
+  private final Cache<String, Multimap<String, String>> containerServices;
 
   private final DefaultServiceFetcher fetcher;
 
@@ -55,7 +55,7 @@ public class DefaultRpcServiceLookup implements RpcServiceLookup {
   @Inject
   public DefaultRpcServiceLookup(DefaultServiceFetcher fetcher,
       @Named("org.apache.shindig.serviceExpirationDurationMinutes")Long duration) {
-    containerServices = new MapMaker().expiration(duration * 60, TimeUnit.SECONDS).makeMap();
+    containerServices = CacheBuilder.newBuilder().expireAfterWrite(duration * 60, TimeUnit.SECONDS).build();
     this.fetcher = fetcher;
   }
 
@@ -69,7 +69,7 @@ public class DefaultRpcServiceLookup implements RpcServiceLookup {
     Preconditions.checkArgument(container.length() != 0);
     Preconditions.checkNotNull(host);
 
-    Multimap<String, String> foundServices = containerServices.get(container);
+    Multimap<String, String> foundServices = containerServices.getIfPresent(container);
     if (foundServices == null) {
       foundServices = fetcher.getServicesForContainer(container, host);
       if (foundServices != null) {
