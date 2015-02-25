@@ -27,12 +27,13 @@ import org.apache.shindig.config.ContainerConfig;
 import org.apache.shindig.gadgets.GadgetException;
 
 import java.io.IOException;
-import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import com.google.common.base.Function;
-import com.google.common.collect.MapMaker;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 
@@ -45,13 +46,14 @@ public class ContainerTagLibraryFactory {
       ContainerTagLibraryFactory.class.getName());
 
   private final ContainerConfig config;
-  private final ConcurrentMap<String, TemplateLibrary> osmlLibraryCache =
-    new MapMaker().makeComputingMap(
-        new Function<String, TemplateLibrary>() {
-          public TemplateLibrary apply(String resourceName) {
-            return loadTrustedLibrary(resourceName);
-          }
-        });
+  private final LoadingCache<String, TemplateLibrary> osmlLibraryCache =
+      CacheBuilder.newBuilder().build(
+          new CacheLoader<String, TemplateLibrary>() {
+              @Override
+              public TemplateLibrary load(String key) {
+                  return loadTrustedLibrary(key);
+              }
+          });
 
   @Inject
   public ContainerTagLibraryFactory(ContainerConfig config) {
@@ -72,7 +74,11 @@ public class ContainerTagLibraryFactory {
       return NullTemplateLibrary.INSTANCE;
     }
 
-    return osmlLibraryCache.get(library);
+    try {
+        return osmlLibraryCache.get(library);
+    } catch (ExecutionException e) {
+        throw new RuntimeException(e);
+    }
   }
 
   static private TemplateLibrary loadTrustedLibrary(String resource) {
