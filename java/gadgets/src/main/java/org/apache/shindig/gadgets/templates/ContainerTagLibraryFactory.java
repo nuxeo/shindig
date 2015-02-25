@@ -43,9 +43,9 @@ import com.google.inject.Singleton;
 public class ContainerTagLibraryFactory {
   private static final Logger logger = Logger.getLogger(
       ContainerTagLibraryFactory.class.getName());
-  
+
   private final ContainerConfig config;
-  private final ConcurrentMap<String, TemplateLibrary> osmlLibraryCache = 
+  private final ConcurrentMap<String, TemplateLibrary> osmlLibraryCache =
     new MapMaker().makeComputingMap(
         new Function<String, TemplateLibrary>() {
           public TemplateLibrary apply(String resourceName) {
@@ -64,21 +64,21 @@ public class ContainerTagLibraryFactory {
   public TemplateLibrary getLibrary(String container) {
     return getOsmlLibrary(container);
   }
-  
+
   private TemplateLibrary getOsmlLibrary(String container) {
     String library = config.getString(container,
         "${Cur['gadgets.features'].osml.library}");
     if (StringUtils.isEmpty(library)) {
       return NullTemplateLibrary.INSTANCE;
     }
-    
+
     return osmlLibraryCache.get(library);
   }
-  
+
   static private TemplateLibrary loadTrustedLibrary(String resource) {
     try {
       String content = ResourceLoader.getContent(resource);
-      return new XmlTemplateLibrary(Uri.parse("#OSML"), XmlUtil.parse(content), 
+      return new XmlTemplateLibrary(Uri.parse("#OSML"), XmlUtil.parse(content),
           content, true);
     } catch (IOException ioe) {
       logger.log(Level.WARNING, null, ioe);
@@ -89,5 +89,5 @@ public class ContainerTagLibraryFactory {
     }
 
     return NullTemplateLibrary.INSTANCE;
-  }  
+  }
 }
